@@ -1,0 +1,71 @@
+# Go binaries and build artifacts
+/bin/
+/build/
+/dist/
+/out/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Test and profiling outputs
+coverage.*
+coverage.out
+*.coverprofile
+*.cov
+profile.out
+cpu.prof
+mem.prof
+trace.out
+
+# Logs and temp
+*.log
+/logs/
+/tmp/
+/temp/
+/.cache/
+/cover/
+/gen/
+/artifacts/
+
+# IDE/editor files
+/.vscode/
+/.idea/
+*.iml
+*.swp
+*.swo
+*.orig
+*~
+/.fleet/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and local configs
+.env
+.env.*
+!.env.example
+/configs/*.local.yaml
+/configs/*.yaml.local
+*.local.yaml
+*.local.yml
+*.secret.yaml
+*.secret.yml
+
+# Docker/dev data
+/docker/*.env
+/docker/*.local
+/docker-data/
+/db-data/
+*.pid
+
+# Databases (local dev)
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore AGENTS.md from VCS
+AGENTS.md
