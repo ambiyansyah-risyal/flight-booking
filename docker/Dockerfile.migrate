@@ -1,0 +1,14 @@
+FROM golang:1.22-alpine AS goose
+RUN apk add --no-cache git
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+FROM alpine:3.19
+RUN adduser -D -u 10002 migrator
+USER migrator
+WORKDIR /work
+COPY --from=goose /go/bin/goose /usr/local/bin/goose
+COPY migrations /work/migrations
+ENV DATABASE_URL=""
+ENTRYPOINT ["/usr/local/bin/goose", "-dir", "migrations", "postgres", "${DATABASE_URL}"]
+CMD ["up"]
+

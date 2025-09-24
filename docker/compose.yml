@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: flight_db
+    environment:
+      POSTGRES_DB: flight
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flight"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/db-init:/docker-entrypoint-initdb.d
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://flight_migrator:migrator@db:5432/flight?sslmode=disable
+    profiles: ["migrate"]
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLIGHT_DB_HOST: db
+      FLIGHT_DB_PORT: 5432
+      FLIGHT_DB_USER: flight_app
+      FLIGHT_DB_PASSWORD: app
+      FLIGHT_DB_NAME: flight
+      FLIGHT_DB_SSLMODE: disable
+    command: ["version"]
+
+volumes:
+  db-data:
+
