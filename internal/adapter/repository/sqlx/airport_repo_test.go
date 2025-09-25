@@ -15,7 +15,7 @@ func newMockDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock, func()) {
     t.Helper()
     db, mock, err := sqlmock.New()
     if err != nil { t.Fatalf("sqlmock: %v", err) }
-    return sqlx.NewDb(db, "pgx"), mock, func() { db.Close() }
+    return sqlx.NewDb(db, "pgx"), mock, func() { _ = db.Close() }
 }
 
 func TestAirportRepo_Create_Success(t *testing.T) {

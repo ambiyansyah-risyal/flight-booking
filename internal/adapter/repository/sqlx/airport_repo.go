@@ -47,7 +47,7 @@ func (r *AirportRepository) GetByCode(ctx context.Context, code string) (*domain
 func (r *AirportRepository) List(ctx context.Context, limit, offset int) ([]domain.Airport, error) {
     rows, err := r.db.QueryxContext(ctx, `SELECT id, code, city, created_at FROM airports ORDER BY code LIMIT $1 OFFSET $2`, limit, offset)
     if err != nil { return nil, err }
-    defer rows.Close()
+    defer func() { _ = rows.Close() }()
     var items []domain.Airport
     for rows.Next() {
         var a domain.Airport
@@ -79,4 +79,3 @@ func isUniqueViolation(err error) bool {
     msg := strings.ToLower(err.Error())
     return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "unique constraint")
 }
-

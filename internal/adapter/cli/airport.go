@@ -35,7 +35,7 @@ func withAirportUsecase(run func(u *usecase.AirportUsecase) error) error {
     if err != nil { return err }
     db, err := newDB(cfg.Database.DSN())
     if err != nil { return err }
-    defer db.Close()
+    defer func() { _ = db.Close() }()
     repo := newAirportRepo(db)
     uc := usecase.NewAirportUsecase(repo)
     return run(uc)
@@ -72,9 +72,9 @@ func newAirportListCmd() *cobra.Command {
                 items, err := u.List(context.Background(), limit, offset)
                 if err != nil { return err }
                 tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-                fmt.Fprintln(tw, "CODE\tCITY")
+                _, _ = fmt.Fprintln(tw, "CODE\tCITY")
                 for _, a := range items {
-                    fmt.Fprintf(tw, "%s\t%s\n", a.Code, a.City)
+                    _, _ = fmt.Fprintf(tw, "%s\t%s\n", a.Code, a.City)
                 }
                 return tw.Flush()
             })

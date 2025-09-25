@@ -32,7 +32,7 @@ func newDBPingCmd() *cobra.Command {
             // Ping with timeout
             ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
             defer cancel()
-            if err := db.DB.PingContext(ctx); err != nil {
+            if err := db.PingContext(ctx); err != nil {
                 return fmt.Errorf("ping: %w", err)
             }
             // Simple sanity query
@@ -45,4 +45,3 @@ func newDBPingCmd() *cobra.Command {
         },
     }
 }
-

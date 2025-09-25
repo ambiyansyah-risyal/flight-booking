@@ -24,7 +24,7 @@ func TestDefaultsAndDSN(t *testing.T) {
 
 func TestEnvFallbackWithoutPrefix(t *testing.T) {
     // When plain env exists, it should also be considered
-    os.Unsetenv("FLIGHT_DB_HOST")
+    _ = os.Unsetenv("FLIGHT_DB_HOST")
     t.Setenv("DB_HOST", "127.0.0.1")
     cfg, err := Load()
     if err != nil { t.Fatalf("load: %v", err) }
@@ -32,4 +32,3 @@ func TestEnvFallbackWithoutPrefix(t *testing.T) {
         t.Fatalf("expected host from DB_HOST, got %q", cfg.Database.Host)
     }
 }
-
