@@ -34,6 +34,7 @@ Env examples for local CLI
 Common commands
 - Airports: `go run ./cmd/flight-booking airport list` | `create --code CGK --city Jakarta` | `update --code CGK --city NewName` | `delete CGK`
 - DB health: `go run ./cmd/flight-booking db:ping`
+- Bookings: `go run ./cmd/flight-booking booking search --origin CGK --destination SIN --date 2025-01-02` | `go run ./cmd/flight-booking booking book --schedule 1 --name "Alice"`
 
 ## End-to-End Test
 - Requirements: Local Docker daemon available.
