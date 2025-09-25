@@ -1,14 +1,15 @@
-FROM golang:1.22-alpine AS goose
+FROM golang:1.23-alpine AS goose
 RUN apk add --no-cache git
+# Pin goose to a version compatible with Go 1.22
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 FROM alpine:3.19
 RUN adduser -D -u 10002 migrator
-USER migrator
 WORKDIR /work
 COPY --from=goose /go/bin/goose /usr/local/bin/goose
 COPY migrations /work/migrations
 ENV DATABASE_URL=""
-ENTRYPOINT ["/usr/local/bin/goose", "-dir", "migrations", "postgres", "${DATABASE_URL}"]
+USER migrator
+# Use shell entrypoint so $DATABASE_URL and $@ are expanded correctly
+ENTRYPOINT ["/bin/sh", "-lc", "goose -dir migrations postgres \"$DATABASE_URL\" \"$0\" \"$@\""]
 CMD ["up"]
-

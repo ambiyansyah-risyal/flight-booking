@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS airports (
     city VARCHAR(128) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Grant DML privileges to app role
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE airports TO flight_app;
 -- Seed a couple of airports (idempotent)
 INSERT INTO airports (code, city)
     VALUES ('CGK', 'Jakarta'), ('DPS', 'Denpasar')
