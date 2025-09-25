@@ -83,6 +83,10 @@ compose-down:
 compose-migrate:
 	docker compose -f docker/compose.yml run --rm migrate up
 
+.PHONY: compose-verify-all
+compose-verify-all:
+	bash scripts/compose-verify.sh
+
 .PHONY: compose-verify
 compose-verify:
 	# Build images

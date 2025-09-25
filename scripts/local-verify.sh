@@ -66,16 +66,57 @@ export FLIGHT_DB_PASSWORD=app
 export FLIGHT_DB_NAME=$DB
 export FLIGHT_DB_SSLMODE=disable
 
-set -x
-go run ./cmd/flight-booking version
-go run ./cmd/flight-booking db:ping
-go run ./cmd/flight-booking airport list --limit 10
-go run ./cmd/flight-booking airport create --code TST --city "Test City"
-go run ./cmd/flight-booking airport list --limit 10
-go run ./cmd/flight-booking airport update --code TST --city "New Test City"
-go run ./cmd/flight-booking airport list --limit 10
-go run ./cmd/flight-booking airport delete TST
-go run ./cmd/flight-booking airport list --limit 10
-set +x
+# Helpers for asserting outcomes
+run_ok() {
+  echo ">>> OK: $*"
+  set -x; "$@"; rc=$?; set +x
+  if [ $rc -ne 0 ]; then echo "Expected OK but failed: $*" >&2; exit 1; fi
+}
+run_fail() {
+  echo ">>> FAIL (expected): $*"
+  set +e; set -x; "$@"; rc=$?; set +x; set -e
+  if [ $rc -eq 0 ]; then echo "Expected failure but succeeded: $*" >&2; exit 1; fi
+}
+
+# Basic sanity
+run_ok go run ./cmd/flight-booking version
+run_ok go run ./cmd/flight-booking db:ping
+
+echo "[5a/6] Airport scenarios"
+# Initial list (seeded CGK/DPS)
+run_ok go run ./cmd/flight-booking airport list --limit 10
+# Create a few airports
+run_ok go run ./cmd/flight-booking airport create --code SUB --city "Surabaya"
+run_ok go run ./cmd/flight-booking airport create --code UPG --city "Makassar"
+# Duplicate should fail
+run_fail go run ./cmd/flight-booking airport create --code SUB --city "Surabaya"
+# Pagination sample
+run_ok go run ./cmd/flight-booking airport list --limit 1 --offset 1
+# Update
+run_ok go run ./cmd/flight-booking airport update --code UPG --city "Makassar (Ujung Pandang)"
+# Delete non-existent (expect failure)
+run_fail go run ./cmd/flight-booking airport delete XYZ
+# Delete and verify list
+run_ok go run ./cmd/flight-booking airport delete SUB
+run_ok go run ./cmd/flight-booking airport delete UPG
+run_ok go run ./cmd/flight-booking airport list --limit 10
+
+echo "[5b/6] Airplane scenarios"
+# Create airplanes
+run_ok go run ./cmd/flight-booking airplane create --code B737 --seats 180
+run_ok go run ./cmd/flight-booking airplane create --code A320 --seats 150
+# Duplicate and invalid seats
+run_fail go run ./cmd/flight-booking airplane create --code B737 --seats 180
+run_fail go run ./cmd/flight-booking airplane create --code INV --seats 0
+# Pagination and list
+run_ok go run ./cmd/flight-booking airplane list --limit 1 --offset 1
+# Update seats and non-existent update
+run_ok go run ./cmd/flight-booking airplane update --code B737 --seats 200
+run_fail go run ./cmd/flight-booking airplane update --code NONE --seats 100
+# Delete and non-existent delete
+run_ok go run ./cmd/flight-booking airplane delete B737
+run_ok go run ./cmd/flight-booking airplane delete A320
+run_fail go run ./cmd/flight-booking airplane delete NONE
+run_ok go run ./cmd/flight-booking airplane list --limit 10
 
 echo "[6/6] Done. Container will be removed."
