@@ -79,3 +79,20 @@ compose-down:
 compose-migrate:
 	docker compose -f docker/compose.yml run --rm migrate up
 
+.PHONY: compose-verify
+compose-verify:
+	# Build images
+	docker compose -f docker/compose.yml build app migrate
+	# Start DB only
+	docker compose -f docker/compose.yml up -d db
+	# Wait for DB readiness
+	@echo "Waiting for DB to be ready..."
+	@until docker compose -f docker/compose.yml exec -T db pg_isready -U postgres -d flight >/dev/null 2>&1; do \
+		echo -n "."; sleep 1; \
+	done; echo
+	# Run migrations, then basic checks
+	docker compose -f docker/compose.yml run --rm migrate up
+	docker compose -f docker/compose.yml run --rm app db:ping
+	docker compose -f docker/compose.yml run --rm app airport list --limit 10
+	# Tear down
+	docker compose -f docker/compose.yml down -v
