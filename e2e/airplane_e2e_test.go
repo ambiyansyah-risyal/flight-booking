@@ -8,9 +8,7 @@ import (
     "testing"
 )
 
-// Helpers moved to helpers_e2e_test.go
-
-func TestAirportE2E(t *testing.T) {
+func TestAirplaneE2E(t *testing.T) {
     dsn, terminate := startPostgres(t)
     defer terminate()
     applyBootstrap(t, dsn)
@@ -29,60 +27,34 @@ func TestAirportE2E(t *testing.T) {
     os.Setenv("FLIGHT_DB_NAME", dbname)
     os.Setenv("FLIGHT_DB_SSLMODE", "disable")
 
-    // 1) Create new airports (seeded CGK/DPS exist already)
-    if _, err := runCLI("airport", "create", "--code", "SUB", "--city", "Surabaya"); err != nil {
-        t.Fatalf("create SUB: %v", err)
-    }
-    if _, err := runCLI("airport", "create", "--code", "UPG", "--city", "Makassar"); err != nil {
-        t.Fatalf("create UPG: %v", err)
-    }
-    // Duplicate create should error
-    if _, err := runCLI("airport", "create", "--code", "SUB", "--city", "Surabaya"); err == nil {
-        t.Fatalf("expected duplicate create error")
-    }
-
-    // 2) List with pagination
-    out, err := runCLI("airport", "list", "--limit", "3", "--offset", "0")
-    if err != nil { t.Fatalf("list: %v", err) }
-    if !(strings.Contains(out, "SUB") && strings.Contains(out, "Surabaya")) { t.Fatalf("unexpected list content: %s", out) }
-
-    // 3) Update UPG city name and verify via list
-    if _, err := runCLI("airport", "update", "--code", "UPG", "--city", "Makassar (Ujung Pandang)"); err != nil {
-        t.Fatalf("update UPG: %v", err)
-    }
-    out, err = runCLI("airport", "list", "--limit", "10")
-    if err != nil { t.Fatalf("list after update: %v", err) }
-    if !(strings.Contains(out, "UPG") && strings.Contains(out, "Makassar (Ujung Pandang)")) { t.Fatalf("updated city not found: %s", out) }
-
-    // 4) Delete DPS (seeded) and ensure it disappears
-    if _, err := runCLI("airport", "delete", "DPS"); err != nil { t.Fatalf("delete DPS: %v", err) }
-    out, err = runCLI("airport", "list", "--limit", "50")
-    if err != nil { t.Fatalf("list after delete: %v", err) }
-    if strings.Contains(out, "DPS") || strings.Contains(out, "Denpasar") { t.Fatalf("DPS still present after delete: %s", out) }
-
-    // 5) Airplane scenarios (create, duplicate fail, invalid seats, list, update, not found, delete)
+    // Create airplanes
     if _, err := runCLI("airplane", "create", "--code", "B737", "--seats", "180"); err != nil {
         t.Fatalf("create B737: %v", err)
     }
     if _, err := runCLI("airplane", "create", "--code", "A320", "--seats", "150"); err != nil {
         t.Fatalf("create A320: %v", err)
     }
+    // Duplicate and invalid seats
     if _, err := runCLI("airplane", "create", "--code", "B737", "--seats", "180"); err == nil {
         t.Fatalf("expected duplicate airplane error")
     }
     if _, err := runCLI("airplane", "create", "--code", "INV", "--seats", "0"); err == nil {
         t.Fatalf("expected invalid seats error")
     }
+    // Pagination and list
     if _, err := runCLI("airplane", "list", "--limit", "1", "--offset", "1"); err != nil {
         t.Fatalf("airplane list pagination: %v", err)
     }
+    // Update seats and non-existent update
     if _, err := runCLI("airplane", "update", "--code", "B737", "--seats", "200"); err != nil {
         t.Fatalf("update B737 seats: %v", err)
     }
     if _, err := runCLI("airplane", "update", "--code", "NONE", "--seats", "100"); err == nil {
         t.Fatalf("expected update non-existent airplane error")
     }
+    // Delete and non-existent delete
     if _, err := runCLI("airplane", "delete", "B737"); err != nil { t.Fatalf("delete B737: %v", err) }
     if _, err := runCLI("airplane", "delete", "A320"); err != nil { t.Fatalf("delete A320: %v", err) }
     if _, err := runCLI("airplane", "delete", "NONE"); err == nil { t.Fatalf("expected delete non-existent airplane error") }
 }
+
