@@ -3,6 +3,7 @@ package cli
 import (
     "bytes"
     "context"
+    "fmt"
     "os"
     "testing"
     
@@ -77,4 +78,53 @@ func TestAirportCLI_Subcommands(t *testing.T) {
     // Delete
     os.Args = []string{"flight-booking", "airport", "delete", "DPS"}
     if err := Execute(); err != nil { t.Fatalf("delete: %v", err) }
+}
+
+func TestAirportCLI_DBInitError(t *testing.T) {
+    oldNewDB := newDB
+    t.Cleanup(func(){ newDB = oldNewDB })
+    newDB = func(dsn string) (*sqlx.DB, error) { return nil, fmt.Errorf("open error") }
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "airport", "list"}
+    if err := Execute(); err == nil { t.Fatalf("expected error from db open") }
+}
+
+func TestAirportCLI_CreateMissingFlags(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "airport", "create"}
+    if err := Execute(); err == nil { t.Fatalf("expected error due to required flags") }
+}
+
+func TestAirportCLI_UpdateMissingFlags(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "airport", "update"}
+    if err := Execute(); err == nil { t.Fatalf("expected error due to required flags") }
+}
+
+func TestAirportCLI_DeleteNotFound(t *testing.T) {
+    oldNewDB := newDB
+    oldNewRepo := newAirportRepo
+    t.Cleanup(func(){ newDB = oldNewDB; newAirportRepo = oldNewRepo })
+    mockDB, _, err := sqlmock.New()
+    if err != nil { t.Fatalf("sqlmock: %v", err) }
+    sqldb := sqlx.NewDb(mockDB, "pgx")
+    newDB = func(dsn string) (*sqlx.DB, error) { return sqldb, nil }
+    r := &fakeRepo{data: map[string]string{"CGK":"Jakarta"}}
+    newAirportRepo = func(db *sqlx.DB) domain.AirportRepository { return r }
+
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "airport", "delete", "XXX"}
+    if err := Execute(); err == nil { t.Fatalf("expected not found error") }
+}
+
+func TestDBPing_FailFast(t *testing.T) {
+    // Use an unreachable port to cause quick failure
+    t.Setenv("FLIGHT_DB_HOST", "127.0.0.1")
+    t.Setenv("FLIGHT_DB_PORT", "1")
+    t.Setenv("FLIGHT_DB_USER", "u")
+    t.Setenv("FLIGHT_DB_PASSWORD", "p")
+    t.Setenv("FLIGHT_DB_NAME", "db")
+    t.Setenv("FLIGHT_DB_SSLMODE", "disable")
+    os.Args = []string{"flight-booking", "db:ping"}
+    if err := Execute(); err == nil { t.Fatalf("expected ping error") }
 }

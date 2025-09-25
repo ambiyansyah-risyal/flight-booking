@@ -11,3 +11,8 @@ func TestMainExecute(t *testing.T) {
     main()
 }
 
+func TestMainExecute_Help(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking"}
+    main()
+}

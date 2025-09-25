@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 0.90
+        threshold: 0.02
+    patch:
+      default:
+        target: 0.85
+        threshold: 0.05
+
+ignore:
+  - "**/*.md"
+  - "**/migrations/**"
+  - "**/docker/**"

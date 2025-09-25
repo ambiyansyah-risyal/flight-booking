@@ -2,6 +2,7 @@ package sqlxrepo
 
 import (
     "context"
+    "errors"
     "regexp"
     "testing"
     "time"
@@ -103,6 +104,51 @@ func TestAirportRepo_GetByCode_Success_UpdateDeleteNotFound(t *testing.T) {
         WillReturnResult(sqlmock.NewResult(0, 0))
     if err := repo.Delete(context.Background(), "XXX"); err != domain.ErrAirportNotFound {
         t.Fatalf("want not found on delete, got %v", err)
+    }
+}
+
+func TestAirportRepo_List_QueryError(t *testing.T) {
+    db, mock, cleanup := newMockDB(t)
+    defer cleanup()
+    repo := NewAirportRepository(db)
+    mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, code, city, created_at FROM airports ORDER BY code LIMIT $1 OFFSET $2`)).
+        WithArgs(1, 0).
+        WillReturnError(errors.New("db down"))
+    if _, err := repo.List(context.Background(), 1, 0); err == nil {
+        t.Fatalf("expected error")
+    }
+}
+
+func TestAirportRepo_List_RowsError(t *testing.T) {
+    db, mock, cleanup := newMockDB(t)
+    defer cleanup()
+    repo := NewAirportRepository(db)
+    now := time.Now()
+    rows := sqlmock.NewRows([]string{"id","code","city","created_at"}).AddRow(1, "CGK", "Jakarta", now)
+    rows.RowError(0, errors.New("row error"))
+    mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, code, city, created_at FROM airports ORDER BY code LIMIT $1 OFFSET $2`)).
+        WithArgs(10, 0).WillReturnRows(rows)
+    if _, err := repo.List(context.Background(), 10, 0); err == nil {
+        t.Fatalf("expected rows error")
+    }
+}
+
+func TestAirportRepo_Update_Delete_Errors(t *testing.T) {
+    db, mock, cleanup := newMockDB(t)
+    defer cleanup()
+    repo := NewAirportRepository(db)
+    mock.ExpectExec(regexp.QuoteMeta(`UPDATE airports SET city=$2 WHERE code=$1`)).
+        WithArgs("CGK", "City").
+        WillReturnError(errors.New("update failed"))
+    if err := repo.Update(context.Background(), "CGK", "City"); err == nil {
+        t.Fatalf("expected update error")
+    }
+
+    mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM airports WHERE code=$1`)).
+        WithArgs("CGK").
+        WillReturnError(errors.New("delete failed"))
+    if err := repo.Delete(context.Background(), "CGK"); err == nil {
+        t.Fatalf("expected delete error")
     }
 }
 
