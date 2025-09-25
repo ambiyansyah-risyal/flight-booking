@@ -33,6 +33,7 @@ func newRootCmd() *cobra.Command {
     // Subcommands
     cmd.AddCommand(newVersionCmd())
     cmd.AddCommand(newDBPingCmd())
+    cmd.AddCommand(newAirportCmd())
 
     return cmd
 }
@@ -60,4 +61,3 @@ func Execute() error {
 
     return newRootCmd().Execute()
 }
-

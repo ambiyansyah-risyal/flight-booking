@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 -- Initial schema: airports table
 CREATE TABLE IF NOT EXISTS airports (
     id SERIAL PRIMARY KEY,
@@ -9,5 +11,9 @@ CREATE TABLE IF NOT EXISTS airports (
 INSERT INTO airports (code, city)
     VALUES ('CGK', 'Jakarta'), ('DPS', 'Denpasar')
 ON CONFLICT (code) DO NOTHING;
+-- +goose StatementEnd
 
+-- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS airports;
+-- +goose StatementEnd
