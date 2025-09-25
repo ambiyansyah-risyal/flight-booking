@@ -100,3 +100,7 @@ compose-verify:
 .PHONY: test-e2e
 test-e2e:
 	go test -tags e2e ./e2e -v
+
+.PHONY: local-verify
+local-verify:
+	bash scripts/local-verify.sh
