@@ -15,7 +15,11 @@ GOOSE := $(shell command -v goose 2>/dev/null)
 all: build
 
 build:
-	$(GO) build $(GOFLAGS) -o bin/$(APP) ./cmd/flight-booking
+	@VERSION=$$(git describe --tags --abbrev=0 2>/dev/null || echo dev); \
+	COMMIT=$$(git rev-parse --short HEAD); \
+	DATE=$$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+	LDFLAGS="-s -w -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.Version=$$VERSION -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.Commit=$$COMMIT -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.BuildDate=$$DATE"; \
+	$(GO) build $(GOFLAGS) -ldflags "$$LDFLAGS" -o bin/$(APP) ./cmd/flight-booking
 
 run:
 	$(GO) run ./cmd/flight-booking

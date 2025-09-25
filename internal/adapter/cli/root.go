@@ -10,8 +10,9 @@ import (
 )
 
 var (
-    version = "0.1.0"
-    commit  = "dev"
+    Version   = "0.2.0-dev"
+    Commit    = "dev"
+    BuildDate = ""
 )
 
 func newRootCmd() *cobra.Command {

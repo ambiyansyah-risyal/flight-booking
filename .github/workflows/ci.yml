@@ -27,7 +27,12 @@ jobs:
         run: go mod download
 
       - name: Build
-        run: go build ./...
+        run: |
+          VERSION=${GITHUB_REF_NAME:-dev}
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then VERSION=${GITHUB_REF_NAME}; fi
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-s -w -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.Version=${VERSION} -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.Commit=${GITHUB_SHA} -X github.com/ambiyansyah-risyal/flight-booking/internal/adapter/cli.BuildDate=${DATE}"
+          go build -ldflags "$LDFLAGS" ./...
 
       - name: Test
         run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
