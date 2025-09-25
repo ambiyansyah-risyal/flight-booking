@@ -6,10 +6,11 @@ import (
     "fmt"
     "os"
     "testing"
-    
+
     "github.com/DATA-DOG/go-sqlmock"
     "github.com/ambiyansyah-risyal/flight-booking/internal/domain"
     "github.com/jmoiron/sqlx"
+    "strings"
 )
 
 func captureOutput(fn func()) string {
@@ -40,6 +41,20 @@ func TestExecute_Help(t *testing.T) {
         if err := Execute(); err != nil { t.Fatalf("execute: %v", err) }
     })
     if out == "" { t.Fatalf("expected help output") }
+}
+
+func TestVersion_WithBuildMeta(t *testing.T) {
+    // Set build metadata to exercise version output branch
+    oldV, oldC, oldD := Version, Commit, BuildDate
+    Version, Commit, BuildDate = "1.2.3", "abc1234", "2025-01-01T00:00:00Z"
+    t.Cleanup(func(){ Version, Commit, BuildDate = oldV, oldC, oldD })
+
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "version"}
+    out := captureOutput(func(){ _ = Execute() })
+    if !(strings.Contains(out, "1.2.3") && strings.Contains(out, "abc1234") && strings.Contains(out, "2025-01-01")) {
+        t.Fatalf("unexpected version output: %s", out)
+    }
 }
 
 // Fake repo for CLI tests

@@ -34,6 +34,7 @@ func newRootCmd() *cobra.Command {
     cmd.AddCommand(newVersionCmd())
     cmd.AddCommand(newDBPingCmd())
     cmd.AddCommand(newAirportCmd())
+    cmd.AddCommand(newAirplaneCmd())
 
     return cmd
 }

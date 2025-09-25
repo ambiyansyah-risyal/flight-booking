@@ -51,3 +51,18 @@ func TestInvalidSSLMode(t *testing.T) {
         t.Fatalf("expected sslmode validation error")
     }
 }
+
+func TestInvalidPort(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    t.Setenv("FLIGHT_DB_PORT", "0")
+    if _, err := Load(); err == nil {
+        t.Fatalf("expected port validation error")
+    }
+}
+
+func TestDiscoverConfig_NoFile(t *testing.T) {
+    got := DiscoverConfig()
+    if len(got) != 0 {
+        t.Fatalf("expected no files discovered, got %v", got)
+    }
+}
