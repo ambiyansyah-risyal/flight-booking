@@ -96,3 +96,7 @@ compose-verify:
 	docker compose -f docker/compose.yml run --rm app airport list --limit 10
 	# Tear down
 	docker compose -f docker/compose.yml down -v
+
+.PHONY: test-e2e
+test-e2e:
+	go test -tags e2e ./e2e -v

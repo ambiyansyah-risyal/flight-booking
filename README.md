@@ -20,7 +20,7 @@ Production-ready, scalable flight booking system built in Go. Designed with Clea
 
 ## Quick Start
 - Prereqs: Go 1.22+, Docker, Docker Compose
-- One-shot verify: `make compose-verify` (builds images, starts DB, runs Goose migrations, pings DB, lists seeded airports, tears down)
+- One-shot verify: `make compose-verify` (builds images, starts DB, runs Goose migrations, pings DB, lists seeded airports, tears down).
 - Manual:
   - Start DB: `docker compose -f docker/compose.yml up -d db`
   - Migrate: `docker compose -f docker/compose.yml run --rm migrate up`
@@ -32,5 +32,10 @@ Env examples for local CLI
 Common commands
 - Airports: `go run ./cmd/flight-booking airport list` | `create --code CGK --city Jakarta` | `update --code CGK --city NewName` | `delete CGK`
 - DB health: `go run ./cmd/flight-booking db:ping`
+
+## End-to-End Test
+- Requirements: Local Docker daemon available.
+- Run: `make test-e2e`
+  - Uses Testcontainers to start Postgres, applies Goose migrations, and exercises CLI commands (create/list/update/delete) against the DB.
 
 See `TASKS.md` for high-level scope and roadmap.
