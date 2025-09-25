@@ -20,6 +20,9 @@ func TestDefaultsAndDSN(t *testing.T) {
     if dsn != want {
         t.Fatalf("dsn mismatch: got %q want %q", dsn, want)
     }
+    if cfg.Database.MaxOpenConns == 0 || cfg.Database.ConnMaxLife == 0 {
+        t.Fatalf("expected defaults for pool settings")
+    }
 }
 
 func TestEnvFallbackWithoutPrefix(t *testing.T) {
@@ -30,5 +33,21 @@ func TestEnvFallbackWithoutPrefix(t *testing.T) {
     if err != nil { t.Fatalf("load: %v", err) }
     if cfg.Database.Host != "127.0.0.1" {
         t.Fatalf("expected host from DB_HOST, got %q", cfg.Database.Host)
+    }
+}
+
+func TestDBURLOverride(t *testing.T) {
+    t.Setenv("FLIGHT_DATABASE_URL", "postgres://user:pass@db:5432/name?sslmode=require")
+    cfg, err := Load()
+    if err != nil { t.Fatalf("load: %v", err) }
+    if cfg.Database.DSN() != "postgres://user:pass@db:5432/name?sslmode=require" {
+        t.Fatalf("expected URL override, got %s", cfg.Database.DSN())
+    }
+}
+
+func TestInvalidSSLMode(t *testing.T) {
+    t.Setenv("FLIGHT_DB_SSLMODE", "weird")
+    if _, err := Load(); err == nil {
+        t.Fatalf("expected sslmode validation error")
     }
 }
