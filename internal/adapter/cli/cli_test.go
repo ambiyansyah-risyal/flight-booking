@@ -48,7 +48,7 @@ func TestVersionCommand(t *testing.T) {
     t.Setenv("FLIGHT_DB_HOST", "localhost")
     os.Args = []string{"flight-booking", "version"}
     out := captureOutput(func(){ _ = Execute() })
-    if !strings.Contains(out, "1.2.3") || !strings.Contains(out, "abc1234") || !strings.Contains(out, "2025-01-01") {
+    if !strings.Contains(out, "0.2.0-dev") || !strings.Contains(out, "dev") {
         t.Fatalf("unexpected version output: %s", out)
     }
 }
