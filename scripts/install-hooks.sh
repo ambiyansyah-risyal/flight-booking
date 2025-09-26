@@ -8,19 +8,14 @@ SCRIPTS_DIR="$(git rev-parse --show-toplevel)/scripts"
 
 echo "Installing Git hooks..."
 
-# Copy the hook scripts to the .git/hooks directory
-cp "$SCRIPTS_DIR/pre-commit-check.sh" "$HOOKS_DIR/pre-commit"
-cp "$SCRIPTS_DIR/prevent-co-authored.sh" "$HOOKS_DIR/prepare-commit-msg" 
-
-# Make the hooks executable
-chmod +x "$HOOKS_DIR/pre-commit" "$HOOKS_DIR/prepare-commit-msg"
-
-# Since the original hooks have different names, let me create proper hook content
+# Create the pre-commit hook with proper git root path
 cat > "$HOOKS_DIR/pre-commit" << 'EOF'
 #!/bin/bash
 # Git pre-commit hook to run checks before committing
 
-SCRIPTS_DIR="$(dirname "$0")/../scripts"
+# Get the root directory of the git repository
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 echo "Running pre-commit checks..."
 
@@ -44,11 +39,14 @@ echo "✅ All pre-commit checks passed!"
 exit 0
 EOF
 
+# Create the prepare-commit-msg hook with proper git root path
 cat > "$HOOKS_DIR/prepare-commit-msg" << 'EOF'
 #!/bin/bash
 # Git hook to prevent co-authored-by lines in commit messages
 
-SCRIPTS_DIR="$(dirname "$0")/../scripts"
+# Get the root directory of the git repository
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # Call the script to prevent co-authored-by lines
 "$SCRIPTS_DIR/prevent-co-authored.sh" $1 $2 $3
