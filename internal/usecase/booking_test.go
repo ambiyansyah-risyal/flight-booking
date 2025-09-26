@@ -268,3 +268,68 @@ func TestBookingUsecase_ListBySchedule(t *testing.T) {
 		t.Fatalf("expected schedule not found, got %v", err)
 	}
 }
+
+func TestBookingUsecase_SearchTransitFlights(t *testing.T) {
+	bookings := newFakeBookingRepo()
+	bookings.counts[1] = 1  // First leg: 1 booked out of 2 seats
+	bookings.counts[2] = 0  // Second leg: 0 booked out of 2 seats
+
+	schedules := newFakeScheduleRepoBooking()
+	schedules.items[1] = domain.FlightSchedule{ID: 1, RouteCode: "RT1", AirplaneCode: "A320", DepartureDate: "2025-01-01"}
+	schedules.items[2] = domain.FlightSchedule{ID: 2, RouteCode: "RT2", AirplaneCode: "A320", DepartureDate: "2025-01-01"}
+
+	airplanes := newFakeAirplaneRepoBooking()
+	airplanes.items["A320"] = domain.Airplane{Code: "A320", SeatCapacity: 2}
+
+	routes := &fakeRouteRepoBooking{
+		items: []domain.Route{
+			{Code: "RT1", OriginCode: "CGK", DestinationCode: "SIN"},  // CGK -> SIN (intermediate)
+			{Code: "RT2", OriginCode: "SIN", DestinationCode: "NRT"}, // SIN -> NRT (final destination)
+		},
+	}
+
+	uc := NewBookingUsecase(bookings, schedules, routes, airplanes)
+
+	transitOptions, err := uc.SearchTransitFlights(context.Background(), "cgk", "nrt", "2025-01-01")
+	if err != nil {
+		t.Fatalf("transit search: %v", err)
+	}
+
+	if len(transitOptions) != 1 {
+		t.Fatalf("expected 1 transit option, got %d", len(transitOptions))
+	}
+
+	option := transitOptions[0]
+	if option.Intermediate != "SIN" {
+		t.Fatalf("expected intermediate airport SIN, got %s", option.Intermediate)
+	}
+	if option.TotalAvailable != 1 { // Limited by first leg (2-1=1 available)
+		t.Fatalf("expected 1 total available seat, got %d", option.TotalAvailable)
+	}
+	if option.FirstLeg.ScheduleID != 1 {
+		t.Fatalf("expected first leg schedule ID 1, got %d", option.FirstLeg.ScheduleID)
+	}
+	if option.SecondLeg.ScheduleID != 2 {
+		t.Fatalf("expected second leg schedule ID 2, got %d", option.SecondLeg.ScheduleID)
+	}
+
+	// Test with no available connections
+	bookings.counts[2] = 2 // Make second leg fully booked
+	transitOptions, err = uc.SearchTransitFlights(context.Background(), "cgk", "nrt", "2025-01-01")
+	if err != nil {
+		t.Fatalf("transit search with full leg: %v", err)
+	}
+	if len(transitOptions) != 0 {
+		t.Fatalf("expected 0 transit options with full leg, got %d", len(transitOptions))
+	}
+	
+	// Test with invalid dates
+	if _, err := uc.SearchTransitFlights(context.Background(), "CGK", "NRT", "bad-date"); err != domain.ErrInvalidScheduleDate {
+		t.Fatalf("expected invalid date error, got %v", err)
+	}
+	
+	// Test with same origin and destination
+	if _, err := uc.SearchTransitFlights(context.Background(), "CGK", "CGK", "2025-01-01"); err != domain.ErrInvalidRouteAirports {
+		t.Fatalf("expected invalid route airports error, got %v", err)
+	}
+}

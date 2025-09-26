@@ -47,27 +47,60 @@ func withBookingUsecase(run func(*usecase.BookingUsecase) error) error {
 
 func newBookingSearchCmd() *cobra.Command {
 	var origin, destination, departure string
+	var transit bool
 	cmd := &cobra.Command{
 		Use:   "search",
-		Short: "Search direct flights with available seats",
+		Short: "Search flights with available seats (direct or transit)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withBookingUsecase(func(uc *usecase.BookingUsecase) error {
-				options, err := uc.SearchDirectFlights(context.Background(), origin, destination, departure)
-				if err != nil {
-					return err
+				if transit {
+					// Search for transit flights
+					transitOptions, err := uc.SearchTransitFlights(context.Background(), origin, destination, departure)
+					if err != nil {
+						return err
+					}
+					if len(transitOptions) == 0 {
+						fmt.Println("No connecting flights found")
+						return nil
+					}
+					tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+					_, _ = fmt.Fprintln(tw, "FIRST SCHEDULE\tFIRST ROUTE\tFIRST DATE\tFIRST AIRPLANE\tINTERMEDIATE\tSECOND SCHEDULE\tSECOND ROUTE\tSECOND DATE\tSECOND AIRPLANE\tSEATS LEFT")
+					for _, opt := range transitOptions {
+						_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%s\t%d\t%s->%s\t%s\t%s\t%d\n", 
+							opt.FirstLeg.ScheduleID, 
+							opt.FirstLeg.OriginCode, 
+							opt.FirstLeg.DestinationCode, 
+							opt.FirstLeg.DepartureDate, 
+							opt.FirstLeg.AirplaneCode,
+							opt.Intermediate,
+							opt.SecondLeg.ScheduleID,
+							opt.SecondLeg.OriginCode,
+							opt.SecondLeg.DestinationCode,
+							opt.SecondLeg.DepartureDate,
+							opt.SecondLeg.AirplaneCode,
+							opt.TotalAvailable)
+					}
+					return tw.Flush()
+				} else {
+					// Search for direct flights
+					options, err := uc.SearchDirectFlights(context.Background(), origin, destination, departure)
+					if err != nil {
+						return err
+					}
+					tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+					_, _ = fmt.Fprintln(tw, "SCHEDULE\tROUTE\tDATE\tAIRPLANE\tSEATS LEFT\tTOTAL SEATS")
+					for _, opt := range options {
+						_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%d\t%d\n", opt.ScheduleID, opt.OriginCode, opt.DestinationCode, opt.DepartureDate, opt.AirplaneCode, opt.SeatsAvailable, opt.TotalSeats)
+					}
+					return tw.Flush()
 				}
-				tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-				_, _ = fmt.Fprintln(tw, "SCHEDULE\tROUTE\tDATE\tAIRPLANE\tSEATS LEFT\tTOTAL SEATS")
-				for _, opt := range options {
-					_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%d\t%d\n", opt.ScheduleID, opt.OriginCode, opt.DestinationCode, opt.DepartureDate, opt.AirplaneCode, opt.SeatsAvailable, opt.TotalSeats)
-				}
-				return tw.Flush()
 			})
 		},
 	}
 	cmd.Flags().StringVar(&origin, "origin", "", "origin airport code")
 	cmd.Flags().StringVar(&destination, "destination", "", "destination airport code")
 	cmd.Flags().StringVar(&departure, "date", "", "optional departure date (YYYY-MM-DD)")
+	cmd.Flags().BoolVar(&transit, "transit", false, "search for connecting flights instead of direct")
 	_ = cmd.MarkFlagRequired("origin")
 	_ = cmd.MarkFlagRequired("destination")
 	return cmd

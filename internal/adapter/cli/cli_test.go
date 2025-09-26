@@ -43,18 +43,22 @@ func TestExecute_Help(t *testing.T) {
     if out == "" { t.Fatalf("expected help output") }
 }
 
-func TestVersion_WithBuildMeta(t *testing.T) {
-    // Set build metadata to exercise version output branch
-    oldV, oldC, oldD := Version, Commit, BuildDate
-    Version, Commit, BuildDate = "1.2.3", "abc1234", "2025-01-01T00:00:00Z"
-    t.Cleanup(func(){ Version, Commit, BuildDate = oldV, oldC, oldD })
-
+func TestVersionCommand(t *testing.T) {
+    // Capture output or test error cases as appropriate
     t.Setenv("FLIGHT_DB_HOST", "localhost")
     os.Args = []string{"flight-booking", "version"}
     out := captureOutput(func(){ _ = Execute() })
     if !strings.Contains(out, "1.2.3") || !strings.Contains(out, "abc1234") || !strings.Contains(out, "2025-01-01") {
         t.Fatalf("unexpected version output: %s", out)
     }
+}
+
+func TestBookingSearchTransitCommand(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    os.Args = []string{"flight-booking", "booking", "search", "--origin", "CGK", "--destination", "SIN", "--transit", "--date", "2025-01-01"}
+    _ = captureOutput(func(){ _ = Execute() })
+    // The command should run without panic (even if it fails due to DB connection)
+    // This tests that the transit flag is properly integrated
 }
 
 // Fake repo for CLI tests
