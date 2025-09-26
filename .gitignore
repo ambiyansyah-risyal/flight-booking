@@ -72,3 +72,5 @@ AGENTS.md
 
 # Ignore QWEN.md from VCS
 QWEN.md
+cli_coverage.html
+usecase_coverage.html
