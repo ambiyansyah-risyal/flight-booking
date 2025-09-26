@@ -69,3 +69,6 @@ Thumbs.db
 
 # Ignore AGENTS.md from VCS
 AGENTS.md
+
+# Ignore QWEN.md from VCS
+QWEN.md

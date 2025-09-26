@@ -2,6 +2,7 @@ package sqlxrepo
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"regexp"
 	"testing"
@@ -65,6 +66,39 @@ func TestScheduleRepository_CreateDuplicate_InvalidDate_DeleteNotFound(t *testin
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	if err := repo.Delete(context.Background(), 99); err != domain.ErrScheduleNotFound {
 		t.Fatalf("want schedule not found, got %v", err)
+	}
+}
+
+func TestScheduleRepository_GetByID(t *testing.T) {
+	db, mock, cleanup := newMockDB(t)
+	defer cleanup()
+	repo := NewScheduleRepository(db)
+	now := time.Now()
+
+	// Test successful retrieval
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, route_code, airplane_code, departure_date, created_at FROM flight_schedules WHERE id=$1`)).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "route_code", "airplane_code", "departure_date", "created_at"}).
+			AddRow(1, "R1", "A1", now, now))
+	
+	sched, err := repo.GetByID(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("get by id: %v", err)
+	}
+	if sched.ID != 1 || sched.RouteCode != "R1" {
+		t.Fatalf("schedule fields not set correctly: %+v", sched)
+	}
+
+	// Test not found
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, route_code, airplane_code, departure_date, created_at FROM flight_schedules WHERE id=$1`)).
+		WithArgs(int64(99)).
+		WillReturnError(sql.ErrNoRows)
+	sched, err = repo.GetByID(context.Background(), 99)
+	if err != domain.ErrScheduleNotFound {
+		t.Fatalf("want schedule not found, got %v", err)
+	}
+	if sched != nil {
+		t.Fatalf("expected nil schedule for not found")
 	}
 }
 

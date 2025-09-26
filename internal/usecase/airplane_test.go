@@ -39,3 +39,33 @@ func TestAirplaneUsecase_Update_Delete_Validate(t *testing.T) {
     if err := uc.UpdateSeats(context.Background(), "OK", 0); err != domain.ErrInvalidSeatCapacity { t.Fatalf("want seat err: %v", err) }
     if err := uc.Delete(context.Background(), ""); err != domain.ErrInvalidAirplaneCode { t.Fatalf("want code err: %v", err) }
 }
+
+func TestAirplaneUsecase_Update_Delete_Success(t *testing.T) {
+    r := &fakeAirplaneRepo{}
+    uc := NewAirplaneUsecase(r)
+    
+    // Test successful update
+    if err := uc.UpdateSeats(context.Background(), "TEST", 150); err != nil {
+        t.Fatalf("update seats failed: %v", err)
+    }
+    
+    // Test successful delete
+    if err := uc.Delete(context.Background(), "TEST"); err != nil {
+        t.Fatalf("delete failed: %v", err)
+    }
+}
+
+func TestAirplaneUsecase_Update_Delete_RepoErrors(t *testing.T) {
+    r := &fakeAirplaneRepo{updateErr: domain.ErrAirplaneNotFound, deleteErr: domain.ErrAirplaneNotFound}
+    uc := NewAirplaneUsecase(r)
+    
+    // Test repo error for update
+    if err := uc.UpdateSeats(context.Background(), "TEST", 150); err != domain.ErrAirplaneNotFound {
+        t.Fatalf("want repo error: %v", err)
+    }
+    
+    // Test repo error for delete
+    if err := uc.Delete(context.Background(), "TEST"); err != domain.ErrAirplaneNotFound {
+        t.Fatalf("want repo error: %v", err)
+    }
+}

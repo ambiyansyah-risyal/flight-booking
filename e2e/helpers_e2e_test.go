@@ -33,7 +33,10 @@ func startPostgres(t *testing.T) (dsn string, terminate func()) {
             "POSTGRES_DB":       "flight",
             "POSTGRES_USER":     "postgres",
         },
-        WaitingFor: wait.ForListeningPort("5432/tcp").WithStartupTimeout(60 * time.Second),
+        WaitingFor: wait.ForAll(
+            wait.ForListeningPort("5432/tcp"),
+            wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+        ).WithStartupTimeout(60 * time.Second),
     }
     container, err := tc.GenericContainer(ctx, tc.GenericContainerRequest{ContainerRequest: req, Started: true})
     if err != nil { t.Fatalf("start container: %v", err) }

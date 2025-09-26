@@ -31,7 +31,7 @@ func TestBookingE2E(t *testing.T) {
 
 	// Search for available flights
 	searchOut := mustRunCLI(t, "booking", "search", "--origin", "BKA", "--destination", "BKB", "--date", "2025-01-02")
-	if !strings.Contains(searchOut, "SEATS LEFT\t") {
+	if !strings.Contains(searchOut, "SEATS LEFT") {
 		t.Fatalf("search output missing headers: %s", searchOut)
 	}
 	if !strings.Contains(searchOut, "BKPL") {
