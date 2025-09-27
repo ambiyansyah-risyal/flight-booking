@@ -1,5 +1,6 @@
 #!/bin/bash
-# Script to remove co-authored-by lines from commit message and enforce single-line commit messages
+# Script to remove co-authored-by lines from commit message,
+# enforce single-line commit messages, and prevent AI coding tool keywords
 
 COMMIT_MSG_FILE=$1
 
@@ -7,6 +8,14 @@ COMMIT_MSG_FILE=$1
 if grep -q "Co-authored-by:" "$COMMIT_MSG_FILE"; then
     echo "Removing co-authored-by lines from commit message..."
     sed -i '/^Co-authored-by:/d' "$COMMIT_MSG_FILE"
+fi
+
+# Check for AI coding tool keywords in the commit message
+COMMIT_CONTENT=$(cat "$COMMIT_MSG_FILE")
+if echo "$COMMIT_CONTENT" | grep -qiE "(qwen|codex|copilot|github.*ai|chatgpt|gpt|ai.*assistant|openai|anthropic|claude)"; then
+    echo "Error: Commit message contains AI coding tool keywords (qwen, codex, copilot, etc.)."
+    echo "Please remove these references from your commit message."
+    exit 1
 fi
 
 # Count the number of lines in the commit message file and enforce single-line commit message
