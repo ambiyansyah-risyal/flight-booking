@@ -7,8 +7,20 @@ import (
 
 // Test for New function
 func TestNew(t *testing.T) {
-	// Test that the New function signature is correct and can be called
-	// We're not testing actual DB connectivity, just that the function works properly
+	// Note: sqlx.Open doesn't immediately connect to the database, 
+	// so it won't return an error for an invalid URL right away.
+	// It only returns an error when you try to use the connection.
+	// For testing purposes, we'll just ensure the function exists and can be called.
+	db, _ := New("postgres://invalid:password@127.0.0.1:12345/invalid_db")
+	
+	// If we got a db, we need to close it
+	if db != nil {
+		_ = db.Close()
+	}
+	
+	// Just make sure the function can be called without crashing
+	// We can't check if a function is nil in Go with a direct comparison
+	// Just the fact that we can call it means it exists
 }
 
 // Test for error detection functions

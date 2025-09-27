@@ -42,8 +42,21 @@ func newRootCmd() *cobra.Command {
 	return cmd
 }
 
+// ExitHandler is a function that handles exiting the application
+type ExitHandler func(int)
+
+// DefaultExitHandler exits the application with the given code
+func DefaultExitHandler(code int) {
+	os.Exit(code)
+}
+
 // Execute runs the root command.
 func Execute() error {
+	return ExecuteWithExitHandler(DefaultExitHandler)
+}
+
+// ExecuteWithExitHandler runs the root command with a custom exit handler for testing.
+func ExecuteWithExitHandler(exitHandler ExitHandler) error {
 	// Viper base setup
 	viper.SetEnvPrefix("FLIGHT")
 	viper.AutomaticEnv()
@@ -60,7 +73,8 @@ func Execute() error {
 	// Initialize app config to validate env
 	if _, err := config.Load(); err != nil {
 		fmt.Fprintf(os.Stderr, "config error: %v\n", err)
-		os.Exit(1)
+		exitHandler(1) // Use the exit handler instead of os.Exit directly
+		return err      // Also return the error for testability
 	}
 
 	return newRootCmd().Execute()
