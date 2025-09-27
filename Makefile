@@ -85,7 +85,7 @@ compose-migrate:
 
 .PHONY: compose-verify-all
 compose-verify-all:
-	bash scripts/compose-verify.sh
+	bash scripts/verify/compose-verify.sh
 
 .PHONY: compose-verify
 compose-verify:
@@ -111,4 +111,4 @@ test-e2e:
 
 .PHONY: local-verify
 local-verify:
-	bash scripts/local-verify.sh
+	bash scripts/verify/local-verify.sh

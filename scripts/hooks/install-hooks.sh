@@ -20,7 +20,7 @@ SCRIPTS_DIR="$REPO_ROOT/scripts"
 echo "Running pre-commit checks..."
 
 # Call the script to run pre-commit checks
-"$SCRIPTS_DIR/pre-commit-check.sh"
+"$SCRIPTS_DIR/ci/pre-commit-check.sh"
 
 if [ $? -ne 0 ]; then
     echo "❌ Pre-commit checks failed. Commit aborted."
@@ -28,7 +28,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Optionally run act to validate GitHub Actions (only syntax check to keep it fast)
-"$SCRIPTS_DIR/run-act-check.sh"
+"$SCRIPTS_DIR/ci/run-act-check.sh"
 
 if [ $? -ne 0 ]; then
     echo "❌ GitHub Actions validation failed. Commit aborted."
@@ -49,7 +49,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # Call the script to prevent co-authored-by lines
-"$SCRIPTS_DIR/prevent-co-authored.sh" $1 $2 $3
+"$SCRIPTS_DIR/hooks/prevent-co-authored.sh" $1 $2 $3
 EOF
 
 chmod +x "$HOOKS_DIR/pre-commit" "$HOOKS_DIR/prepare-commit-msg"
