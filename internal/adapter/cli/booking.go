@@ -45,7 +45,55 @@ func withBookingUsecase(run func(*usecase.BookingUsecase) error) error {
 	return run(uc)
 }
 
+// OutputWriter is an interface to allow testable output functionality
+type OutputWriter interface {
+	WriteDirectFlightOptions(options []usecase.FlightOption) error
+	WriteTransitFlightOptions(options []usecase.TransitOption) error
+	WriteNoTransitMessage()
+}
+
+// RealOutputWriter implements OutputWriter with actual output functionality
+type RealOutputWriter struct{}
+
+func (r *RealOutputWriter) WriteDirectFlightOptions(options []usecase.FlightOption) error {
+	tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "SCHEDULE\tROUTE\tDATE\tAIRPLANE\tSEATS LEFT\tTOTAL SEATS")
+	for _, opt := range options {
+		_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%d\t%d\n", opt.ScheduleID, opt.OriginCode, opt.DestinationCode, opt.DepartureDate, opt.AirplaneCode, opt.SeatsAvailable, opt.TotalSeats)
+	}
+	return tw.Flush()
+}
+
+func (r *RealOutputWriter) WriteTransitFlightOptions(options []usecase.TransitOption) error {
+	tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "FIRST SCHEDULE\tFIRST ROUTE\tFIRST DATE\tFIRST AIRPLANE\tINTERMEDIATE\tSECOND SCHEDULE\tSECOND ROUTE\tSECOND DATE\tSECOND AIRPLANE\tSEATS LEFT")
+	for _, opt := range options {
+		_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%s\t%d\t%s->%s\t%s\t%s\t%d\n", 
+			opt.FirstLeg.ScheduleID, 
+			opt.FirstLeg.OriginCode, 
+			opt.FirstLeg.DestinationCode, 
+			opt.FirstLeg.DepartureDate, 
+			opt.FirstLeg.AirplaneCode,
+			opt.Intermediate,
+			opt.SecondLeg.ScheduleID,
+			opt.SecondLeg.OriginCode,
+			opt.SecondLeg.DestinationCode,
+			opt.SecondLeg.DepartureDate,
+			opt.SecondLeg.AirplaneCode,
+			opt.TotalAvailable)
+	}
+	return tw.Flush()
+}
+
+func (r *RealOutputWriter) WriteNoTransitMessage() {
+	fmt.Println("No connecting flights found")
+}
+
 func newBookingSearchCmd() *cobra.Command {
+	return newBookingSearchCmdWithOutputWriter(&RealOutputWriter{})
+}
+
+func newBookingSearchCmdWithOutputWriter(writer OutputWriter) *cobra.Command {
 	var origin, destination, departure string
 	var transit bool
 	cmd := &cobra.Command{
@@ -60,39 +108,17 @@ func newBookingSearchCmd() *cobra.Command {
 						return err
 					}
 					if len(transitOptions) == 0 {
-						fmt.Println("No connecting flights found")
+						writer.WriteNoTransitMessage()
 						return nil
 					}
-					tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-					_, _ = fmt.Fprintln(tw, "FIRST SCHEDULE\tFIRST ROUTE\tFIRST DATE\tFIRST AIRPLANE\tINTERMEDIATE\tSECOND SCHEDULE\tSECOND ROUTE\tSECOND DATE\tSECOND AIRPLANE\tSEATS LEFT")
-					for _, opt := range transitOptions {
-						_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%s\t%d\t%s->%s\t%s\t%s\t%d\n", 
-							opt.FirstLeg.ScheduleID, 
-							opt.FirstLeg.OriginCode, 
-							opt.FirstLeg.DestinationCode, 
-							opt.FirstLeg.DepartureDate, 
-							opt.FirstLeg.AirplaneCode,
-							opt.Intermediate,
-							opt.SecondLeg.ScheduleID,
-							opt.SecondLeg.OriginCode,
-							opt.SecondLeg.DestinationCode,
-							opt.SecondLeg.DepartureDate,
-							opt.SecondLeg.AirplaneCode,
-							opt.TotalAvailable)
-					}
-					return tw.Flush()
+					return writer.WriteTransitFlightOptions(transitOptions)
 				} else {
 					// Search for direct flights
 					options, err := uc.SearchDirectFlights(context.Background(), origin, destination, departure)
 					if err != nil {
 						return err
 					}
-					tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-					_, _ = fmt.Fprintln(tw, "SCHEDULE\tROUTE\tDATE\tAIRPLANE\tSEATS LEFT\tTOTAL SEATS")
-					for _, opt := range options {
-						_, _ = fmt.Fprintf(tw, "%d\t%s->%s\t%s\t%s\t%d\t%d\n", opt.ScheduleID, opt.OriginCode, opt.DestinationCode, opt.DepartureDate, opt.AirplaneCode, opt.SeatsAvailable, opt.TotalSeats)
-					}
-					return tw.Flush()
+					return writer.WriteDirectFlightOptions(options)
 				}
 			})
 		},

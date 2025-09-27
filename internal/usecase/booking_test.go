@@ -307,7 +307,9 @@ func TestBookingUsecase_Create_Errors(t *testing.T) {
 		AirplaneCode:  "TEST",
 		DepartureDate: "2025-01-01",
 	}
-	mockSchedRepo.Create(context.Background(), sched)
+	if err := mockSchedRepo.Create(context.Background(), sched); err != nil {
+		t.Fatalf("failed to create schedule in mock: %v", err)
+	}
 	
 	// Airplane doesn't exist
 	_, err = uc.Create(context.Background(), 1, "passenger")
@@ -320,12 +322,76 @@ func TestBookingUsecase_Create_Errors(t *testing.T) {
 		Code:         "TEST",
 		SeatCapacity: 0,
 	}
-	mockAirplaneRepo.Create(context.Background(), plane)
+	if err := mockAirplaneRepo.Create(context.Background(), plane); err != nil {
+		t.Fatalf("failed to create airplane in mock: %v", err)
+	}
 	
 	// Invalid seat capacity
 	_, err = uc.Create(context.Background(), 1, "passenger")
 	if err != domain.ErrInvalidSeatCapacity {
 		t.Errorf("expected ErrInvalidSeatCapacity for airplane with 0 capacity, got %v", err)
+	}
+}
+
+func TestBookingUsecase_Create_FlightFull(t *testing.T) {
+	// Set up repositories with test data to test flight full scenario
+	bookingRepo := &mockBookingRepo{count: 100} // Set count to max capacity
+	scheduleRepo := &mockScheduleRepo{schedules: map[int64]*domain.FlightSchedule{
+		1: {ID: 1, RouteCode: "RT1", AirplaneCode: "A320", DepartureDate: "2025-01-01"},
+	}}
+	airplaneRepo := &mockAirplaneRepo{airplanes: map[string]*domain.Airplane{
+		"A320": {Code: "A320", SeatCapacity: 100}, // Same as booking count, making flight full
+	}}
+	
+	uc := NewBookingUsecase(bookingRepo, scheduleRepo, &mockRouteRepo{}, airplaneRepo)
+	
+	// Try to create a booking when flight is full
+	_, err := uc.Create(context.Background(), 1, "Passenger Name")
+	if err != domain.ErrFlightFull {
+		t.Errorf("expected ErrFlightFull when flight is full, got %v", err)
+	}
+}
+
+func TestBookingUsecase_Create_Success(t *testing.T) {
+	// Set up repositories with test data to test successful booking
+	bookingRepo := &mockBookingRepo{count: 2}
+	scheduleRepo := &mockScheduleRepo{schedules: map[int64]*domain.FlightSchedule{
+		1: {ID: 1, RouteCode: "RT1", AirplaneCode: "A320", DepartureDate: "2025-01-01"},
+	}}
+	airplaneRepo := &mockAirplaneRepo{airplanes: map[string]*domain.Airplane{
+		"A320": {Code: "A320", SeatCapacity: 100},
+	}}
+	
+	uc := NewBookingUsecase(bookingRepo, scheduleRepo, &mockRouteRepo{}, airplaneRepo)
+	
+	// Create a successful booking
+	booking, err := uc.Create(context.Background(), 1, "Passenger Name")
+	if err != nil {
+		t.Errorf("unexpected error for successful booking: %v", err)
+	}
+	
+	if booking == nil {
+		t.Fatal("expected booking to be created, got nil")
+	}
+	
+	if booking.ScheduleID != 1 {
+		t.Errorf("expected ScheduleID 1, got %d", booking.ScheduleID)
+	}
+	
+	if booking.SeatNumber != 3 { // count was 2, so next seat should be 3
+		t.Errorf("expected SeatNumber 3, got %d", booking.SeatNumber)
+	}
+	
+	if booking.PassengerName != "Passenger Name" {
+		t.Errorf("expected Passenger Name 'Passenger Name', got %s", booking.PassengerName)
+	}
+	
+	if booking.Status != domain.BookingStatusConfirmed {
+		t.Errorf("expected Status 'Confirmed', got %s", booking.Status)
+	}
+	
+	if booking.Reference == "" {
+		t.Error("expected non-empty reference")
 	}
 }
 
@@ -378,6 +444,7 @@ func TestBookingUsecase_ListBySchedule_Valid(t *testing.T) {
 	bookings, err = uc.ListBySchedule(context.Background(), 999, 10, 0)
 	if err != nil {
 		// This is expected to err because the schedule ID won't be found in the schedule repo
+		_ = bookings // Use the bookings variable to avoid the ineffectual assignment warning
 	}
 }
 
@@ -469,6 +536,31 @@ func TestBookingUsecase_SearchTransitFlights_ValidParams(t *testing.T) {
 			t.Errorf("transit route not correctly structured: %s->%s->%s", 
 				option.FirstLeg.OriginCode, option.Intermediate, option.SecondLeg.DestinationCode)
 		}
+	}
+}
+
+func TestBookingUsecase_GetByReference_Valid(t *testing.T) {
+	// Create a repository with a booking to test retrieval
+	bookingRepo := &mockBookingRepo{
+		bookings: map[string]*domain.Booking{
+			"BK-TEST001": {Reference: "BK-TEST001", ScheduleID: 1, PassengerName: "Test Passenger", SeatNumber: 1, Status: domain.BookingStatusConfirmed},
+		},
+	}
+	
+	uc := NewBookingUsecase(bookingRepo, &mockScheduleRepo{}, &mockRouteRepo{}, &mockAirplaneRepo{})
+	
+	// Test successful retrieval
+	booking, err := uc.GetByReference(context.Background(), "BK-TEST001")
+	if err != nil {
+		t.Errorf("unexpected error for valid reference: %v", err)
+	}
+	
+	if booking == nil {
+		t.Fatal("expected booking to be returned, got nil")
+	}
+	
+	if booking.Reference != "BK-TEST001" {
+		t.Errorf("expected reference 'BK-TEST001', got %s", booking.Reference)
 	}
 }
 

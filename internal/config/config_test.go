@@ -60,6 +60,44 @@ func TestInvalidPort(t *testing.T) {
     }
 }
 
+func TestInvalidPortTooHigh(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost")
+    t.Setenv("FLIGHT_DB_PORT", "65536")  // Above valid range
+    if _, err := Load(); err == nil {
+        t.Fatalf("expected port validation error for port too high")
+    }
+}
+
+func TestEmptyHost(t *testing.T) {
+    // To test empty host validation, we need to override the default value
+    // Since the default is "localhost", we need to ensure it can still be empty
+    t.Setenv("FLIGHT_DB_HOST", "localhost") // Start with valid host
+    cfg, err := Load()
+    if err != nil {
+        t.Fatalf("unexpected error with valid host: %v", err)
+    }
+    
+    // Now manually test the validation function with an empty host
+    cfg.Database.Host = ""  // Set host to empty after loading
+    if err := validate(cfg); err == nil {
+        t.Fatalf("expected validation error for empty host")
+    }
+}
+
+func TestWhitespaceHost(t *testing.T) {
+    t.Setenv("FLIGHT_DB_HOST", "localhost") // Start with valid host
+    cfg, err := Load()
+    if err != nil {
+        t.Fatalf("unexpected error with valid host: %v", err)
+    }
+    
+    // Now manually test the validation function with a whitespace-only host
+    cfg.Database.Host = "   "  // Set host to whitespace
+    if err := validate(cfg); err == nil {
+        t.Fatalf("expected validation error for whitespace-only host")
+    }
+}
+
 func TestDiscoverConfig_NoFile(t *testing.T) {
     got := DiscoverConfig()
     if len(got) != 0 {

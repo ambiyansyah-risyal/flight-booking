@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ambiyansyah-risyal/flight-booking/internal/domain"
+	"github.com/ambiyansyah-risyal/flight-booking/internal/usecase"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -204,4 +205,70 @@ func TestBookingCLI_MissingFlags(t *testing.T) {
 	if err := Execute(); err == nil {
 		t.Fatalf("expected error for missing flags")
 	}
+}
+
+// TestWriteTransitFlightOptions tests the WriteTransitFlightOptions method
+func TestWriteTransitFlightOptions(t *testing.T) {
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	t.Cleanup(func() {
+		os.Stdout = old
+	})
+
+	writer := &RealOutputWriter{}
+	options := []usecase.TransitOption{
+		{
+			FirstLeg: usecase.FlightOption{
+				ScheduleID:      1,
+				RouteCode:       "RT1",
+				OriginCode:      "CGK",
+				DestinationCode: "SIN",
+				AirplaneCode:    "A320",
+				DepartureDate:   "2025-01-01",
+				SeatsAvailable:  100,
+				TotalSeats:      150,
+			},
+			Intermediate: "KUL",
+			SecondLeg: usecase.FlightOption{
+				ScheduleID:      2,
+				RouteCode:       "RT2",
+				OriginCode:      "SIN",
+				DestinationCode: "BKK",
+				AirplaneCode:    "B737",
+				DepartureDate:   "2025-01-01",
+				SeatsAvailable:  80,
+				TotalSeats:      120,
+			},
+			TotalAvailable: 5,
+		},
+	}
+
+	err := writer.WriteTransitFlightOptions(options)
+	if err != nil {
+		t.Errorf("WriteTransitFlightOptions returned error: %v", err)
+	}
+
+	// Flush the pipe
+	w.Close()
+	_, _ = r.Read(make([]byte, 1024)) // Read the output to prevent blocking
+}
+
+// TestWriteNoTransitMessage tests the WriteNoTransitMessage method
+func TestWriteNoTransitMessage(t *testing.T) {
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	t.Cleanup(func() {
+		os.Stdout = old
+	})
+
+	writer := &RealOutputWriter{}
+	writer.WriteNoTransitMessage()
+
+	// Flush the pipe
+	w.Close()
+	_, _ = r.Read(make([]byte, 1024)) // Read the output to prevent blocking
 }
